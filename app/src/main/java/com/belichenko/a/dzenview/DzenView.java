@@ -33,6 +33,7 @@ public class DzenView extends View {
         Point center = getViewCenter();
         maxPadding = getMaxPadding();
         Paint paint = new Paint();
+        canvas.drawCircle((float) center.x, (float) center.y, (float) Math.min(center.x, center.y), paint);
 
     }
 
