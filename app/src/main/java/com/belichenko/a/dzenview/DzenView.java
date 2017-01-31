@@ -4,8 +4,13 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Point;
+import android.support.annotation.ColorInt;
 import android.util.AttributeSet;
+import android.util.Log;
+import android.view.MotionEvent;
 import android.view.View;
+import android.view.animation.Animation;
+import android.view.animation.RotateAnimation;
 
 /**
  * Created by Belichenko Anton on 30.01.17.
@@ -14,7 +19,12 @@ import android.view.View;
 
 public class DzenView extends View {
 
-    private int maxPadding;
+    private int mViewDiameter;
+    private Paint mPaint = new Paint();
+    private Point mCenter;
+    private RotateAnimation mRotate;
+    @ColorInt private int mFirstColor = 0xFF000000;
+    @ColorInt private int mSecondColor = 0xDDDDDDDD;
 
     public DzenView(Context context) {
         super(context);
@@ -30,19 +40,117 @@ public class DzenView extends View {
 
     @Override
     protected void onDraw(Canvas canvas) {
-        Point center = getViewCenter();
-        maxPadding = getMaxPadding();
-        Paint paint = new Paint();
-        canvas.drawCircle((float) center.x, (float) center.y, (float) Math.min(center.x, center.y), paint);
-
+        calculateViewDiameterAndCenter();
+        if (mViewDiameter < 40) return; // too small to draw
+        mPaint.setColor(mFirstColor);
+        canvas.drawCircle((float) mCenter.x, (float) mCenter.y, (float) mViewDiameter / 2, mPaint);
+        mPaint.setColor(mSecondColor);
+        canvas.drawCircle((float) mCenter.x, (float) mCenter.y, getSecondCircleRadius(), mPaint);
+        mPaint.setColor(mFirstColor);
+        canvas.drawCircle((float) mCenter.x, (float) mCenter.y - mViewDiameter / 4, getInnerCircleRadius(), mPaint);
+        canvas.drawCircle((float) mCenter.x, (float) mCenter.y + mViewDiameter / 4, getInnerCircleRadius(), mPaint);
     }
 
-    private Point getViewCenter() {
-        return new Point(getWidth() / 2, getHeight() / 2);
+    @Override
+    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+        int desiredWidth = 100;
+        int desiredHeight = 100;
+
+        int widthMode = MeasureSpec.getMode(widthMeasureSpec);
+        int widthSize = MeasureSpec.getSize(widthMeasureSpec);
+        int heightMode = MeasureSpec.getMode(heightMeasureSpec);
+        int heightSize = MeasureSpec.getSize(heightMeasureSpec);
+
+        int width;
+        int height;
+
+        //Measure Width
+        if (widthMode == MeasureSpec.EXACTLY) {
+            //Must be this size
+            width = widthSize;
+        } else if (widthMode == MeasureSpec.AT_MOST) {
+            //Can't be bigger than...
+            width = Math.min(desiredWidth, widthSize);
+        } else {
+            //Be whatever you want
+            width = desiredWidth;
+        }
+
+        //Measure Height
+        if (heightMode == MeasureSpec.EXACTLY) {
+            //Must be this size
+            height = heightSize;
+        } else if (heightMode == MeasureSpec.AT_MOST) {
+            //Can't be bigger than...
+            height = Math.min(desiredHeight, heightSize);
+        } else {
+            //Be whatever you want
+            height = desiredHeight;
+        }
+
+        setMeasuredDimension(width, height);
+    }
+
+    private float getSecondCircleRadius() {
+        return (mViewDiameter - percentFromViewDiametr(6, 2)) / 2;
+    }
+
+    private float getInnerCircleRadius() {
+        return percentFromViewDiametr(12, 10) / 2;
+    }
+
+    private float percentFromViewDiametr(int persent, float minValue) {
+        float result = (mViewDiameter / 100f) * persent;
+        if (minValue > 0 && result < minValue) return minValue;
+        return result;
     }
 
     private int getMaxPadding() {
         int padding = Math.max(getPaddingTop(), Math.max(getPaddingBottom(), Math.max(getPaddingLeft(), getPaddingRight())));
         return padding < 0 ? 0 : padding;
+    }
+
+    private void calculateViewDiameterAndCenter() {
+        mViewDiameter = Math.min(getHeight() - getPaddingTop() - getPaddingBottom(), getWidth() - getPaddingLeft() - getPaddingRight());
+        if (mViewDiameter == 0) {
+            mCenter = new Point(0, 0);
+        } else {
+            mCenter = new Point(mViewDiameter / 2 + getPaddingLeft(), mViewDiameter / 2 + getPaddingTop());
+            setPivotX(mCenter.x);
+            setPivotY(mCenter.y);
+        }
+        Log.d("Tag", "Diameter = " + String.valueOf(mViewDiameter) + ", Center = " + mCenter);
+    }
+
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        float eventX = event.getX();
+        float eventY = event.getY();
+        switch (event.getAction()) {
+            case MotionEvent.ACTION_DOWN:
+                startRotation();
+                return true;
+            case MotionEvent.ACTION_MOVE:
+                break;
+            case MotionEvent.ACTION_UP:
+                Log.d("Tag", "Diameter" + eventX + " - " + eventY);
+                break;
+            default:
+                return false;
+        }
+
+        // Schedules a repaint.
+        //invalidate();
+        return true;
+    }
+
+    protected void startRotation() {
+        super.onAttachedToWindow();
+        mRotate = new RotateAnimation(0, 360,
+                Animation.RELATIVE_TO_SELF, mCenter.x, Animation.RELATIVE_TO_SELF, mCenter.y);
+
+        mRotate.setDuration(2000);
+        mRotate.setRepeatCount(Animation.INFINITE);
+        startAnimation(mRotate);
     }
 }
