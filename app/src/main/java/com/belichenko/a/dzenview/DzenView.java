@@ -7,9 +7,11 @@ import android.graphics.Point;
 import android.support.annotation.ColorInt;
 import android.util.AttributeSet;
 import android.util.Log;
+import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.animation.Animation;
+import android.view.animation.BounceInterpolator;
 import android.view.animation.RotateAnimation;
 
 /**
@@ -23,19 +25,28 @@ public class DzenView extends View {
     private Paint mPaint = new Paint();
     private Point mCenter;
     private RotateAnimation mRotate;
+    private GestureDetector mGestureDetector;
+
     @ColorInt private int mFirstColor = 0xFF000000;
     @ColorInt private int mSecondColor = 0xDDDDDDDD;
 
     public DzenView(Context context) {
         super(context);
+        initView();
     }
 
     public DzenView(Context context, AttributeSet attrs) {
         super(context, attrs);
+        initView();
     }
 
     public DzenView(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
+        initView();
+    }
+
+    private void initView() {
+        mGestureDetector = new GestureDetector(getContext(), new GestureListener(this, getContext()));
     }
 
     @Override
@@ -124,33 +135,36 @@ public class DzenView extends View {
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
+        boolean eventConsumed = mGestureDetector.onTouchEvent(event);
         float eventX = event.getX();
         float eventY = event.getY();
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
-                startRotation();
                 return true;
             case MotionEvent.ACTION_MOVE:
                 break;
             case MotionEvent.ACTION_UP:
-                Log.d("Tag", "Diameter" + eventX + " - " + eventY);
                 break;
             default:
                 return false;
         }
 
-        // Schedules a repaint.
-        //invalidate();
         return true;
     }
 
     protected void startRotation() {
-        super.onAttachedToWindow();
         mRotate = new RotateAnimation(0, 360,
-                Animation.RELATIVE_TO_SELF, mCenter.x, Animation.RELATIVE_TO_SELF, mCenter.y);
-
+                Animation.ABSOLUTE, mCenter.x, Animation.ABSOLUTE, mCenter.y);
+        mRotate.setInterpolator(new BounceInterpolator());
         mRotate.setDuration(2000);
         mRotate.setRepeatCount(Animation.INFINITE);
         startAnimation(mRotate);
     }
+
+    @Override
+    protected void onDetachedFromWindow() {
+        super.onDetachedFromWindow();
+        clearAnimation();
+    }
+
 }
