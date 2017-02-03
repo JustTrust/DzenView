@@ -3,7 +3,6 @@ package com.belichenko.a.dzenview;
 import android.content.Context;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
-import android.widget.Toast;
 
 /**
  * Created by Belichenko Anton on 02.02.17.
@@ -15,7 +14,7 @@ class GestureListener extends GestureDetector.SimpleOnGestureListener {
     DzenView mDzenView;
     Context mContext;
 
-    public GestureListener(DzenView view, Context context){
+    public GestureListener(DzenView view, Context context) {
         mDzenView = view;
         mContext = context;
     }
@@ -23,18 +22,18 @@ class GestureListener extends GestureDetector.SimpleOnGestureListener {
     @Override
     public void onLongPress(MotionEvent e) {
         super.onLongPress(e);
-        Toast.makeText(mContext, "onLongPress", Toast.LENGTH_SHORT).show();
+        mDzenView.onLongPress();
     }
 
     @Override
     public boolean onDoubleTap(MotionEvent e) {
-        Toast.makeText(mContext, "onDoubleTap", Toast.LENGTH_SHORT).show();
+        mDzenView.onDoubleTap();
         return super.onDoubleTap(e);
     }
 
     @Override
     public boolean onSingleTapConfirmed(MotionEvent e) {
-        Toast.makeText(mContext, "onSingleTapConfirmed", Toast.LENGTH_SHORT).show();
+        mDzenView.onSingleTap();
         return super.onSingleTapConfirmed(e);
     }
 

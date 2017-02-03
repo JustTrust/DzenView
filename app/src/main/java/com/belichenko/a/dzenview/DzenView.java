@@ -24,11 +24,17 @@ public class DzenView extends View {
     private int mViewDiameter;
     private Paint mPaint = new Paint();
     private Point mCenter;
-    private RotateAnimation mRotate;
+    private double mStartAngle;
     private GestureDetector mGestureDetector;
+    private AnimationState mLastAnimation = AnimationState.NONE;
+    private RotateAnimation mRotateAnimation;
+    private DzenViewListener mListener;
 
     @ColorInt private int mFirstColor = 0xFF000000;
     @ColorInt private int mSecondColor = 0xDDDDDDDD;
+    @ColorInt private int mTherdColor = 0xDDDD0000;
+
+    enum AnimationState {FORWARD, BACKWARD, NONE}
 
     public DzenView(Context context) {
         super(context);
@@ -49,6 +55,10 @@ public class DzenView extends View {
         mGestureDetector = new GestureDetector(getContext(), new GestureListener(this, getContext()));
     }
 
+    public void setListener(DzenViewListener listener) {
+        mListener = listener;
+    }
+
     @Override
     protected void onDraw(Canvas canvas) {
         calculateViewDiameterAndCenter();
@@ -59,6 +69,7 @@ public class DzenView extends View {
         canvas.drawCircle((float) mCenter.x, (float) mCenter.y, getSecondCircleRadius(), mPaint);
         mPaint.setColor(mFirstColor);
         canvas.drawCircle((float) mCenter.x, (float) mCenter.y - mViewDiameter / 4, getInnerCircleRadius(), mPaint);
+        mPaint.setColor(mTherdColor);
         canvas.drawCircle((float) mCenter.x, (float) mCenter.y + mViewDiameter / 4, getInnerCircleRadius(), mPaint);
     }
 
@@ -136,35 +147,97 @@ public class DzenView extends View {
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         boolean eventConsumed = mGestureDetector.onTouchEvent(event);
-        float eventX = event.getX();
-        float eventY = event.getY();
+        int[] topLeft = new int[2];
+        getLocationOnScreen(topLeft);
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
+                float startX = event.getRawX() - topLeft[0];
+                float startY = event.getRawY() - topLeft[1];
+                mStartAngle = getAngel(startX, startY);
+                Log.d("Ang", "start Angle = " + mStartAngle);
                 return true;
             case MotionEvent.ACTION_MOVE:
-                break;
+                float currentX = event.getRawX() - topLeft[0];
+                float currentY = event.getRawY() - topLeft[1];
+                Log.d("Ang", "current X, Y = " + currentX + ", " + currentY);
+
+                double currentAngle = getAngel(currentX, currentY);
+                if (mListener != null) {
+                    mListener.onAngelChanged(currentAngle);
+                }
+
+                //rotateView((float) (currentAngle - mStartAngle));
+                mStartAngle = currentAngle;
+                return true;
             case MotionEvent.ACTION_UP:
-                break;
+                return false;
             default:
                 return false;
         }
-
-        return true;
     }
 
-    protected void startRotation() {
-        mRotate = new RotateAnimation(0, 360,
-                Animation.ABSOLUTE, mCenter.x, Animation.ABSOLUTE, mCenter.y);
-        mRotate.setInterpolator(new BounceInterpolator());
-        mRotate.setDuration(2000);
-        mRotate.setRepeatCount(Animation.INFINITE);
-        startAnimation(mRotate);
+    private void rotateView(float angel) {
+        setRotation(angel);
+    }
+
+    private double getAngel(float x, float y) {
+        float currentX = x - (float) mCenter.x;
+        float currentY = y - (float) mCenter.y;
+        if (currentX == 0) return y > 0 ? 180 : 0;
+        double a = Math.atan(currentY / currentX) / Math.PI * 180;
+        a = (currentX > 0) ? a + 90 : a + 270;
+        return a;
     }
 
     @Override
     protected void onDetachedFromWindow() {
         super.onDetachedFromWindow();
         clearAnimation();
+        mLastAnimation = AnimationState.NONE;
+    }
+
+    public void onLongPress() {
+
+    }
+
+    public void onDoubleTap() {
+
+    }
+
+    public void onSingleTap() {
+        changeAnimation();
+    }
+
+    private void changeAnimation() {
+        Log.d("Anim", " Direction = " + mLastAnimation);
+        mStartAngle = 0;
+        if (mRotateAnimation != null && !mRotateAnimation.hasEnded()) {
+            mRotateAnimation.setRepeatCount(0);
+        } else {
+            switch (mLastAnimation) {
+                case FORWARD:
+                    getRotateAnimation(false);
+                    mLastAnimation = AnimationState.BACKWARD;
+                    break;
+                default:
+                    getRotateAnimation(true);
+                    mLastAnimation = AnimationState.FORWARD;
+                    break;
+            }
+            startAnimation(mRotateAnimation);
+        }
+    }
+
+    protected void getRotateAnimation(boolean forward) {
+        mRotateAnimation = new RotateAnimation(forward ? 0 : 360, forward ? 360 : 0,
+                Animation.ABSOLUTE, mCenter.x, Animation.ABSOLUTE, mCenter.y);
+        mRotateAnimation.setInterpolator(new BounceInterpolator());
+        mRotateAnimation.setDuration(2000);
+        mRotateAnimation.setRepeatCount(Animation.INFINITE);
+    }
+
+    public interface DzenViewListener {
+        void onAngelChanged(double angel);
     }
 
 }
