@@ -231,8 +231,8 @@ public class DzenView extends View {
     protected void getRotateAnimation(boolean forward) {
         mRotateAnimation = new RotateAnimation(forward ? 0 : 360, forward ? 360 : 0,
                 Animation.ABSOLUTE, mCenter.x, Animation.ABSOLUTE, mCenter.y);
-        mRotateAnimation.setInterpolator(new BounceInterpolator());
-        mRotateAnimation.setDuration(2000);
+        mRotateAnimation.setInterpolator(new ChainInterpolator());
+        mRotateAnimation.setDuration(5000);
         mRotateAnimation.setRepeatCount(Animation.INFINITE);
     }
 
